@@ -29,8 +29,10 @@ def fetch_star_data(quadrant):
 
     try:
         # Procesar XML
-        ET.register_namespace('', 'http://www.ivoa.net/xml/VOTable/v1.3')
-        root = ET.fromstring(response.text)
+        tree = ET.ElementTree(ET.fromstring(response.content))
+        root = tree.getroot()
+        
+        # Procesar los datos aquí
         stream = root.find(".//vo:STREAM", namespaces=NAMESPACE)
         
         if stream is not None:
@@ -64,31 +66,35 @@ def fetch_star_data(quadrant):
             return stars
         else:
             return []
-    
-    except ET.ParseError as e:
-        print(f"Error al parsear el XML: {e}")
+    except ET.ParseError:
         return []
-    except Exception as e:
-        print(f"Ocurrió un error: {e}")
-        return []
-    
 
+# Lista de cuadrantes
+quadrants = [
+    {'raMin': 0, 'raMax': 90, 'decMin': -90, 'decMax': 0},
+    {'raMin': 90, 'raMax': 180, 'decMin': -90, 'decMax': 0},
+    {'raMin': 180, 'raMax': 270, 'decMin': -90, 'decMax': 0},
+    {'raMin': 270, 'raMax': 360, 'decMin': -90, 'decMax': 0},
+    # Agrega más cuadrantes según sea necesario
+]
 
-@app.route('/api/stars')
-def get_stars():
-    quadrants = [
-        {'id': 1, 'raMin': 0, 'raMax': 90, 'decMin': -45, 'decMax': 45},
-        {'id': 2, 'raMin': 90, 'raMax': 180, 'decMin': -45, 'decMax': 45},
-        {'id': 3, 'raMin': 0, 'raMax': 90, 'decMin': -90, 'decMax': -45},
-        {'id': 4, 'raMin': 90, 'raMax': 180, 'decMin': -90, 'decMax': -45},
-    ]
-    
-    # Pool de procesos para paralelismo
-    with Pool(processes=4) as pool:  
+# Función para ejecutar en paralelo
+def fetch_all_star_data(quadrants, num_processes=4):
+    # Crear un pool de procesos
+    with Pool(processes=num_processes) as pool:
+        # Ejecutar fetch_star_data en paralelo para cada cuadrante
         results = pool.map(fetch_star_data, quadrants)
-    # Resultados en una sola lista
-    all_stars = [star for result in results for star in result]
-    return jsonify(all_stars)
+    return results
+
+@app.route('/api/stars', methods=['GET'])
+def get_stars():
+    # Obtener los datos de todas las estrellas en paralelo
+    results = fetch_all_star_data(quadrants)
+    # Aplanar la lista de resultados
+    flattened_results = [item for sublist in results for item in sublist]
+    # Devolver los resultados en formato JSON
+    return jsonify(flattened_results)
 
 if __name__ == '__main__':
+    # Ejecutar la aplicación Flask
     app.run(debug=True, port=3000)
