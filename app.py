@@ -1,3 +1,4 @@
+import time
 from flask import Flask, jsonify
 from flask_cors import CORS
 from multiprocessing import Pool
@@ -71,24 +72,84 @@ def fetch_star_data(quadrant):
     except Exception as e:
         print(f"Ocurrió un error: {e}")
         return []
-    
+
+
+
+
+def dividir_cuadrantes(cuadrantes, num_procesar):
+    # Si hay más procesos que cuadrantes, subdividir
+    if num_procesar > len(cuadrantes):
+        proporcion = math.ceil(num_procesar / len(cuadrantes))
+        sub_cuadrantes = []
+        for q in cuadrantes:
+            step_ra = (q['raMax'] - q['raMin']) / proporcion
+            for i in range(proporcion):
+                sub_cuadrantes.append({
+                    'raMin': q['raMin'] + step_ra * i,
+                    'raMax': q['raMin'] + step_ra * (i + 1),
+                    'decMin': q['decMin'],
+                    'decMax': q['decMax']
+                })
+        return sub_cuadrantes
+    else:
+        # Agrupar cuadrantes para menos procesos
+        cuadrantes_agrupados = []
+        tamanio_grupo = math.ceil(len(cuadrantes) / num_procesar)
+        for i in range(0, len(cuadrantes), tamanio_grupo):
+            cuadrante_combinado = cuadrantes[i:i + tamanio_grupo]
+            cuadrantes_agrupados.append({
+                'raMin': min(q['raMin'] for q in cuadrante_combinado),
+                'raMax': max(q['raMax'] for q in cuadrante_combinado),
+                'decMin': min(q['decMin'] for q in cuadrante_combinado),
+                'decMax': max(q['decMax'] for q in cuadrante_combinado)
+            })
+        return cuadrantes_agrupados
 
 
 @app.route('/api/stars')
 def get_stars():
-    quadrants = [
+    cuadrantesFijo = [
         {'id': 1, 'raMin': 0, 'raMax': 90, 'decMin': -45, 'decMax': 45},
         {'id': 2, 'raMin': 90, 'raMax': 180, 'decMin': -45, 'decMax': 45},
         {'id': 3, 'raMin': 0, 'raMax': 90, 'decMin': -90, 'decMax': -45},
         {'id': 4, 'raMin': 90, 'raMax': 180, 'decMin': -90, 'decMax': -45},
     ]
-    
-    # Pool de procesos para paralelismo
-    with Pool(processes=4) as pool:  
-        results = pool.map(fetch_star_data, quadrants)
-    # Resultados en una sola lista
-    all_stars = [star for result in results for star in result]
-    return jsonify(all_stars)
+    ##########secuencial
+    # Ejecutar en secuencial, descomenta
+    #tiempo_inicio_sec = time.time()
+    #estrellas_secuenciales= [fetch_star_data(q) for q in cuadrantesFijo]
+    #tiempo_fin_sec = time.time()
+
+    # Tiempo secuencial
+    #sec_tiempo = tiempo_fin_sec - tiempo_inicio_sec
+    #print(f"Tiempo secuencial: {sec_tiempo:.2f}")
+    #return jsonify(estrellas_secuenciales)
+
+
+
+    #######Paralello
+    numProcesos = 4 #Comienza desde 2 para paralelizar, arriba ya esta el secuencial
+    resultadosParalelo = []
+    #Ejecutar en paralelo y descomenta
+
+    #Hay menos o igual de procesadores que cuandrantes, que se encargue Pool
+    #if(numProcesos <= len(cuadrantesFijo)):
+        # Pool de procesos para paralelismo
+    #    inicio_paralelo = time.time()
+    #    with Pool(processes=numProcesos) as pool:  
+    #        resultados= pool.map(fetch_star_data, cuadrantesFijo)
+    #        resultadosParalelo = [star for resultado in resultados for star in resultado]
+    #    fin_paralelo = time.time()
+    #    print(f"Tiempo paralelo en : {fin_paralelo-inicio_paralelo:.2f} con {numProcesos} procesadores")
+    #else:
+    #    #mas procesos que cuadrantes, a subdividir para aprovechas el proceso creado
+    #    inicio_paralelo = time.time()
+    #    cuadrantes_subdi = dividir_cuadrantes(cuadrantesFijo, numProcesos)
+    #    with Pool(processes=numProcesos) as pool:
+    #        resultadosParalelo = pool.map(fetch_star_data, cuadrantes_subdi)
+    #    fin_paralelo = time.time()
+    #    print(f"Tiempo paralelo en : {fin_paralelo-inicio_paralelo:.2f} con {numProcesos} procesadores")
+    #return jsonify(resultadosParalelo)
 
 if __name__ == '__main__':
     app.run(debug=True, port=3000)
