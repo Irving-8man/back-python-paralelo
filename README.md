@@ -6,7 +6,10 @@
 ## 👥 **Integrantes**  
 - **Irving Geyler Cupul Uc**   
 - **Ibis Carrillo Araujo**   
-- **Edwin Apolonio Martin Ake**  
+- **Edwin Apolonio Martin Ake**
+
+## Asesor:
+- 👩‍💻 Dr. José Luis López Martínez
 
 ---
 
@@ -29,6 +32,9 @@
 ---
 
 ## ⚡️ **Speedup**  
+### Caracteristicas de la maquina
+- CPU: AMD Ryzen 3 3300U with Radeon Ve
+- GPU: AMD ATI Radeon Vega Series / Rad
 ![Tabla](/speedup.png)
 
 ---
